@@ -66,6 +66,64 @@ version-15` or `version-16`. Fixes are cherry-picked across branches as needed.
 
 Item 12 (app scaffold) may now proceed.
 
+### Q11 — ERPNext-specific outbound interception ⏳ OPEN
+
+**Context:** Item 14 intercepts Frappe's generic "Webhook Request Log" mechanism.
+ERPNext (by far the most widely deployed Frappe app) has its own outbound paths
+that bypass that mechanism entirely. ERPNext is the primary reason most Frappe
+sites exist, so this gap matters in practice.
+
+**Known outbound surfaces, by risk:**
+
+| Risk | Surface | Mechanism |
+|------|---------|-----------|
+| Critical | Payment gateways (Stripe, Razorpay, PayPal, Braintree) | Direct `requests` calls; some via `frappe.integrations.utils` |
+| Critical | Shipping carriers (FedEx, UPS, DHL, Shipstation) | Direct `requests` or `frappe.integrations.utils` |
+| High | E-commerce connectors (Shopify, WooCommerce) | Direct API sync; bidirectional — staging can write back to production storefronts |
+| High | SMS gateways (Twilio, Exotel) | Direct calls |
+| High | Slack (`erpnext/support/doctype/slack_webhook_url/`) | `requests.post()` directly; no Webhook Request Log entry |
+| Medium | Cloud backups (S3, Dropbox, Google Drive) | boto3 / provider SDK directly |
+| Low | Currency exchange rate fetching | Read-only external API |
+| Low | Google Maps / geocoding | Read-only |
+
+The cofferdam decision engine already has explicit `allow_authorize` /
+`allow_capture` gates (BR-DECISION-008) designed for the payment gateway risk.
+The gap is that ERPNext calls processor APIs directly rather than through
+Frappe's generic webhook mechanism.
+
+**High-leverage interception point:** Frappe's `"Integration Request"` DocType
+(`frappe/integrations/doctype/integration_request/`) is written by
+`frappe.integrations.utils.make_request()` / `make_post_request()` /
+`make_get_request()` before making outbound calls. A single `doc_events` hook
+on `"Integration Request" before_insert` would intercept a large portion of the
+above list. Integrations that call `requests` directly (some payment gateways,
+Shopify connector) would still escape it and require per-DocType hooks.
+
+**Preference (2026-07-17):** Strong intent to support ERPNext interception.
+
+**Proposed approach:** Conditional import with graceful fallback — if ERPNext is
+not installed on the bench, the ERPNext-specific hooks simply do not register.
+
+```python
+try:
+    import erpnext  # noqa: F401
+    _ERPNEXT_AVAILABLE = True
+except ImportError:
+    _ERPNEXT_AVAILABLE = False
+```
+
+Hook registration in `hooks.py` would be conditional on `_ERPNEXT_AVAILABLE`,
+or handler functions would early-return when it is False.
+
+**Open sub-questions:**
+1. Should `"Integration Request" before_insert` be implemented first as the
+   highest-leverage single hook, with per-DocType hooks added incrementally?
+2. Should the ERPNext-specific `doc_events` live in a separate
+   `cofferdam_app/erpnext.py` module to keep the Frappe-only surface clean
+   and independently testable?
+3. Is the graceful-import pattern sufficient, or does bench's app ordering
+   guarantee ERPNext is importable when cofferdam_app initializes?
+
 ## Implementation sequence (document-driven)
 
 **`cofferdam` library (`datahenge/cofferdam`)**
@@ -84,8 +142,8 @@ Item 12 (app scaffold) may now proceed.
 
 **`cofferdam-app` Frappe app (`datahenge/cofferdam-app`)**
 
-12. ⏳ App scaffold (bench app structure, `requirements.txt` declaring `cofferdam` dependency)
-13. ⏳ `frappe.sendmail` interception via hooks + monkey-patch, routed through policy engine
-14. ⏳ Webhook delivery interception
-15. ⏳ App tests (bench-level integration tests; mocked Frappe where bench unavailable)
-16. ⏳ App README and install guide
+12. ✅ App scaffold (bench app structure, `pyproject.toml` declaring `cofferdam` dependency; targets Frappe v16 / Python 3.14+; `version-15` backport deferred)
+13. ✅ `frappe.sendmail` interception via `doc_events` on Email Queue `before_insert`, routed through policy + decoration engine
+14. ✅ Webhook delivery interception via `doc_events` on Webhook Request Log `before_insert`; policy key `integrations.frappe_webhooks`
+15. ✅ App tests (28 tests; Frappe stubbed via sys.modules — no bench required; covers policy cache, email interception, webhook interception, all fail-closed paths)
+16. ✅ App README and install guide (installation, policy examples for all modes, decoration, reload, coverage table, dev workflow)
