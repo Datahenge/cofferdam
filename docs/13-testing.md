@@ -22,8 +22,17 @@ they exercise.
 | Undefined credential reference rejected | `test_config.py` | ✅ |
 | Production blanket allow-all rejected | `test_config.py` | ✅ |
 | CLI validate / inspect / decide | `test_cli.py` | ✅ |
-| Redirect handling policy | *email/HTTP milestone* | ⏳ |
+| Redirect handling policy | `test_http.py` | ✅ |
 | Email recipient domain allow/block | *email milestone* | ⏳ |
+| Subject decorated with env name in non-production | *email milestone* | ⏳ |
+| Subject unchanged in production | *email milestone* | ⏳ |
+| Body: plain-text notice prepended | *email milestone* | ⏳ |
+| Body: HTML banner injected after `<body>` tag | *email milestone* | ⏳ |
+| Body: HTML banner prepended when no `<body>` tag | *email milestone* | ⏳ |
+| HTML body detected via `<html`/`<body` substring | *email milestone* | ⏳ |
+| `decorate = false` in `[mail]` suppresses decoration | *email milestone* | ⏳ |
+| Production never decorates regardless of `decorate` setting | *email milestone* | ⏳ |
+| `decorate_email` passthrough when decoration disabled | *email milestone* | ⏳ |
 
 ## Running
 

@@ -20,19 +20,51 @@ open-source PyPI package and are all reversible before 1.0.
 
 ## Where your confirmation would help
 
-1. **Package name `cofferdam` on PyPI** — memorable and matches the repo, but it
-   drops the `frappe`/`erpnext` discoverability of the provisional names. Option:
-   keep `cofferdam` and add keywords (done) vs. publish under a `frappe-`-prefixed
-   name. *Default: `cofferdam`.*
-2. **Minimum Python** — currently **3.10+** (with a `tomli` backport). Dropping to
-   3.11+ would let us use stdlib `tomllib` with zero backport. *Default: 3.10+.*
-3. **License** — **MIT**. If Datahenge prefers Apache-2.0 (explicit patent grant)
-   for a security-adjacent tool, say so. *Default: MIT.*
-4. **Repository namespace** — URLs currently point at
-   `github.com/datahenge/cofferdam`. Confirm the org/owner.
+1. **Package name `cofferdam` on PyPI** — ✅ **CONFIRMED 2026-07-17.** Base
+   library and CLI publish as `cofferdam`. The Frappe app (`cofferdam-app`) is
+   NOT on PyPI; Frappe apps cannot be installed via pip.
+2. **Minimum Python** — ✅ **CONFIRMED 2026-07-17. 3.10+** (with `tomli` backport).
+   Frappe v15 requires `>=3.10,<3.15`; bumping to 3.11+ would break v15 sites
+   still on 3.10. stdlib `tomllib` deferred.
+3. **License** — ✅ **CONFIRMED 2026-07-17. Apache-2.0.** Chosen for the explicit
+   patent grant, which is appropriate for a security-adjacent library used in
+   commercial ERP deployments.
+4. **Repository namespace** — ✅ **CONFIRMED 2026-07-17.** `github.com/datahenge/cofferdam`.
 
-None of these block progress; they are easy to change now and hard to change
-after publishing.
+Items 1–4 are resolved. Q9 below is newly opened.
+
+## New open questions
+
+### Q10 — Email decoration ✅ CONFIRMED 2026-07-17
+
+**Context:** Non-production emails can look identical to Production emails —
+same sender, same content — giving recipients no way to know the source.
+
+**Resolution:** `cofferdam.mail` provides pure functions (`decorate_subject`,
+`decorate_body`, `decorate_email`, `should_decorate`) that mutate subject and
+body before send. All decisions confirmed:
+
+| Decision | Resolution |
+|----------|------------|
+| Environment label | Actual environment name, uppercased (`STAGING`, `TEST`, `DEV`) |
+| Subject format | `{ENV} - {original subject}` |
+| Body format | Detect HTML vs plain-text; HTML → `<div>` banner after `<body>` or prepended; plain-text → notice line + blank line |
+| HTML detection | Case-insensitive substring match for `<html` or `<body`; no external parser |
+| Default behavior | **On by default** for all non-production envs and all mail modes; opt out via `decorate = false` in `[mail]` |
+| Production | Never decorates regardless of `decorate` setting |
+| Where logic lives | `cofferdam.mail` pure functions — fully unit-testable without Frappe |
+
+Spec: `docs/07-email-policy.md` (`BR-EMAIL-DECORATE-001` – `BR-EMAIL-DECORATE-006`).
+Schema change: `MailPolicy.decorate: bool = True` in `cofferdam.models`.
+
+### Q9 — `cofferdam-app` branch strategy ✅ CONFIRMED 2026-07-17
+
+**Resolution:** Option A — two long-lived branches in one repo (`version-15`,
+`version-16`), mirroring the branch convention used by `frappe/frappe` and
+`frappe/erpnext` themselves. Users install via `bench get-app ... --branch
+version-15` or `version-16`. Fixes are cherry-picked across branches as needed.
+
+Item 12 (app scaffold) may now proceed.
 
 ## Implementation sequence (document-driven)
 
@@ -44,8 +76,8 @@ after publishing.
 4. ✅ Decision engine
 5. ✅ Env-var credential resolution + redaction
 6. ✅ CLI `validate` / `inspect` / `decide`
-7. ⏳ Policy-checked HTTP helper (send path + redirect re-validation)
-8. ⏳ Email policy checks
+7. ✅ Policy-checked HTTP helper (send path + redirect re-validation)
+8. ✅ Email policy checks + decoration
 9. ⏳ Frappe helper module (site discovery, caching)
 10. ◑ Restore-safety + host-parsing tests (core done; HTTP/email/Frappe pending)
 11. ◑ README with ERPNext usage examples (core README done; deepen per milestone)

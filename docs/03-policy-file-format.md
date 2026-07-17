@@ -25,10 +25,19 @@ loudly rather than silently disabling a guard.
 |-----|------|---------|-------|
 | `environment` | enum | *required* | `production` \| `staging` \| `test` \| `dev` |
 | `default_decision` | enum | `deny` | `allow` \| `deny`; `allow` in production is rejected (`BR-VALIDATE-009`) |
-| `mail` | table | — | see [07](07-email-policy.md) |
+| `mail` | table | — | see below and [07](07-email-policy.md) |
 | `credentials.<name>` | table | — | see below |
 | `integrations.<name>` | table | — | see below |
 | `effects.<kind>.<scope>` | table | — | scoped effect rules |
+
+### `[mail]`
+
+| Key | Type | Default | Notes |
+|-----|------|---------|-------|
+| `mode` | string | `deny` | `deny` \| `sink` \| `allow_internal` |
+| `sink` | string | — | sink address used when `mode = "sink"` |
+| `allow_domains` | list[str] | `[]` | domains permitted when `mode = "allow_internal"` |
+| `decorate` | bool | `true` | prepend environment label to subject and body in non-Production; set `false` to opt out (`BR-EMAIL-DECORATE-002`) |
 
 ### `credentials.<name>` (`BR-SECRET-001`)
 

@@ -65,6 +65,28 @@ response = request(
 The host is parsed from `url` and evaluated *before* any request is sent
 ([06](06-host-url-handling.md)). Redirects are not followed by default.
 
+## Email decoration (`BR-EMAIL-DECORATE-*`, optional)
+
+```python
+from cofferdam.mail import decorate_subject, decorate_body, decorate_email, should_decorate
+
+# Check once whether this policy/environment decorates
+if should_decorate(policy):
+    subject = decorate_subject("Weekly Sales Report", environment="staging")
+    # → "STAGING - Weekly Sales Report"
+
+    body = decorate_body(body_text, environment="staging")
+    # plain-text body → notice prepended
+    # HTML body      → <div> banner injected after <body> tag
+
+# Convenience: checks should_decorate internally; returns originals if inactive
+subject, body = decorate_email(subject, body_text, policy=policy)
+```
+
+`should_decorate(policy)` returns `False` for `production` or when
+`policy.mail.decorate = false`; `True` otherwise (including when `policy.mail`
+is absent). `decorate_email` is a no-op passthrough in those cases.
+
 ## Frappe (`BR-API-005`)
 
 ```python

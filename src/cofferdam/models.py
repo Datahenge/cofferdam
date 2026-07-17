@@ -97,6 +97,7 @@ class MailPolicy(_Strict):
     mode: str = "deny"  # e.g. "deny", "sink", "allow_internal"
     sink: str | None = None
     allow_domains: list[str] = Field(default_factory=list)
+    decorate: bool = True  # BR-EMAIL-DECORATE-002: on by default, opt out with false
 
 
 class EffectRule(_Strict):
