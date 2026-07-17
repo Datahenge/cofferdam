@@ -87,13 +87,6 @@ subject, body = decorate_email(subject, body_text, policy=policy)
 `policy.mail.decorate = false`; `True` otherwise (including when `policy.mail`
 is absent). `decorate_email` is a no-op passthrough in those cases.
 
-## Frappe (`BR-API-005`)
-
-```python
-from cofferdam.frappe import get_policy
-policy = get_policy()   # locates the active site's policy; caches per process
-```
-
 ## Stability
 
 Pre-1.0 the API may change between minor versions; breaking changes are recorded

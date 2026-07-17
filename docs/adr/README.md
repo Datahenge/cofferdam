@@ -13,7 +13,8 @@ supersedes the old one. Format after Michael Nygard's ADR template.
 | [0006](0006-pydantic-v2-schema-validation.md) | Validate the schema with Pydantic v2 | Accepted |
 | [0007](0007-env-var-credentials.md) | Env-var credentials; reject raw secrets by default | Accepted |
 | [0008](0008-httpx-optional-http-helper.md) | HTTP helper wraps httpx as an optional extra | Accepted |
-| [0010](0010-frappe-isolation.md) | Isolate Frappe behind one guarded module | Accepted |
+| [0010](0010-frappe-isolation.md) | Isolate Frappe behind one guarded module | Superseded by ADR-0012 |
 | [0011](0011-frappe-app-first-release.md) | Ship a Frappe app (`cofferdam-app`) in the first release | Accepted |
+| [0012](0012-remove-cofferdam-frappe-module.md) | Remove `cofferdam.frappe` from the core library | Accepted |
 
 *ADR-0001 and ADR-0009 were deleted: neither recorded an architectural decision. 0001 was template boilerplate already covered by the ground rules; 0009 was a security requirement already fully specified in [06 — Host & URL Handling](../06-host-url-handling.md).*

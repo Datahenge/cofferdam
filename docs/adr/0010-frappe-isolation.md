@@ -1,6 +1,6 @@
 # ADR-0010 — Isolate Frappe behind one guarded module
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0012](0012-remove-cofferdam-frappe-module.md)
 - **Date:** 2026-07-16
 - **Related:** [ADR-0002](0002-python-library-not-frappe-app.md)
 

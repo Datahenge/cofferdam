@@ -78,9 +78,9 @@ Item 12 (app scaffold) may now proceed.
 6. ✅ CLI `validate` / `inspect` / `decide`
 7. ✅ Policy-checked HTTP helper (send path + redirect re-validation)
 8. ✅ Email policy checks + decoration
-9. ⏳ Frappe helper module (site discovery, caching)
-10. ◑ Restore-safety + host-parsing tests (core done; HTTP/email/Frappe pending)
-11. ◑ README with ERPNext usage examples (core README done; deepen per milestone)
+9. ❌ Frappe helper module — cancelled (ADR-0012). Site discovery belongs in `cofferdam-app`; core library has no Frappe dependency.
+10. ✅ Restore-safety + host-parsing tests (Frappe leg removed per ADR-0012; HTTP and email legs covered in test_http.py and test_mail.py)
+11. ✅ README rewritten: ecosystem-agnostic framing, cofferdam-app link, Apache-2.0 license (ERPNext usage examples belong in cofferdam-app docs)
 
 **`cofferdam-app` Frappe app (`datahenge/cofferdam-app`)**
 
