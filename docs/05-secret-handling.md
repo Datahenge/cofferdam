@@ -19,12 +19,12 @@ from; it is not the secret.
 
 ## Redaction (`BR-LOG-002`)
 
-**The library never logs, prints, `repr`s, or embeds a secret value** in any
-output or exception message. Concretely:
+Secret values are never logged, printed, or embedded in exceptions — see
+[08 — Logging & Observability](08-logging-observability.md). Within this module:
 
 - `Credential.secret_value` uses `repr=False`.
 - `resolve_secret` returns the secret to the caller but never logs it.
-- A `SecretResolutionError` may name the *missing environment variable* (e.g.
+- A `SecretResolutionError` names the *missing environment variable* (e.g.
   `WINDMILL_API_KEY`) — never a value.
 - `Decision.as_log_dict()` and CLI `inspect` emit the credential *reference name*
   and its *source name*, never the value.

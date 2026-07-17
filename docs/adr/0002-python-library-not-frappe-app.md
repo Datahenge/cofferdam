@@ -28,5 +28,6 @@ may be added later if Desk UI, fixtures, or Bench commands are needed.
   Bench present (`BR-OVERVIEW-009`, `BR-TEST-004`).
 - It is reusable beyond Frappe (any Python service with the same refresh hazard).
 - Frappe users get helpers without a mandatory app install.
-- Some Frappe niceties (Desk diagnostics) are out of scope until/unless the
-  optional app layer is built.
+- Frappe niceties (Desk diagnostics, fixtures, Bench commands) are out of scope
+  for the core library. A companion Frappe app (`cofferdam-app`) ships alongside
+  it — see [ADR-0011](0011-frappe-app-first-release.md).

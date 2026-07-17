@@ -8,6 +8,7 @@ Host checks are security-critical: a substring match is a bypass. Implemented in
 - **BR-HOST-001 — Whole-hostname match, never substring.** `allowed_hosts =
   ["sandbox.vendor.com"]` must **not** authorize `sandbox.vendor.com.evil.example`
   or `evil.sandbox.vendor.com`. Matching compares the full hostname for equality.
+  Port matching is not supported in v1.
 - **BR-HOST-002 — Structured parsing.** The HTTP helper extracts the hostname with
   `urllib.parse.urlsplit(url).hostname`, never by scanning the raw URL string.
 - **BR-HOST-003 — Case-insensitive.** `SANDBOX.VENDOR.COM` matches
@@ -23,12 +24,6 @@ Redirects are **not** followed by default
 following redirects, each redirect target must be re-validated against the policy
 before any credential-bearing header is re-sent. A redirect to a non-allowed host
 is a denial, not a silent follow.
-
-## Ports
-
-Port handling is explicit where port checks are added. v1 matches on hostname
-only; a future `allowed_hosts` entry format may include a port, at which point the
-default-port semantics will be specified here before implementation.
 
 ## Examples
 

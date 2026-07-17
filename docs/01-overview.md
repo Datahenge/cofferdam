@@ -67,4 +67,6 @@ added later if Desk UI, fixtures, or Bench commands are needed.
 TOML policy loading; strict validation; environment identification; per-effect
 allow/deny decisions; env-var credential resolution with redaction; a
 policy-checked HTTP helper (optional extra); email *policy checks*; Frappe
-site-policy discovery helpers; and a `validate` / `inspect` / `decide` CLI.
+site-policy discovery helpers; and a `validate` / `inspect` / `decide` CLI. See
+[14 — Acceptance Criteria](14-acceptance-criteria.md) for the full checklist and
+status.

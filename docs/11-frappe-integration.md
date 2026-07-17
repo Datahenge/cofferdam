@@ -33,11 +33,6 @@ installs, imports, and tests with no Bench present
 
 ## Caching decision
 
-v1 caches per process with an **explicit reload** function; automatic mtime-based
-invalidation is deferred (see [15 — Open Questions](15-open-questions.md)). This
-keeps behavior predictable across Frappe's multiple worker processes, where a
-shared in-memory cache would otherwise be inconsistent.
+v1 caches per process via explicit `reload_policy()`; mtime-based auto-invalidation
+is deferred. See [ADR-0010](../adr/0010-frappe-isolation.md) for rationale.
 
-> **Status:** signatures are frozen here; the `cofferdam.frappe` bodies are
-> implemented in the Frappe milestone. The functions currently raise
-> `NotImplementedError` so the contract is visible without a Bench.

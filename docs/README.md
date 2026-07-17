@@ -41,7 +41,7 @@ so they need not be re-litigated.
 
 ### Decisions
 
-See **[docs/adr/](adr/)** for ADR-0001 … ADR-0010.
+See **[docs/adr/](adr/)** for the full ADR index.
 
 ## Provenance
 

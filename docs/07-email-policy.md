@@ -1,9 +1,8 @@
 # 07 — Email Policy
 
 Implemented in `cofferdam.mail`. v1 provides **policy checks**, not a replacement
-for Frappe's email subsystem ([ADR-0007](adr/0007-env-var-credentials.md) scope
-note). Project-specific ERPNext email code calls these checks to avoid unsafe
-sends.
+for Frappe's email subsystem ([ADR-0011](adr/0011-frappe-app-first-release.md)).
+Project-specific ERPNext email code calls these checks to avoid unsafe sends.
 
 ## Supported dispositions (`BR-EMAIL-*`)
 
@@ -37,12 +36,3 @@ enabled = true
 allow_domains = ["example.internal"]
 ```
 
-## Scope note
-
-The library does not replace Frappe's entire email system in the first release.
-It provides enough policy checks and helper functions for ERPNext custom code to
-avoid unsafe sends. A deeper Frappe email hook may come later behind the optional
-Frappe layer.
-
-> **Status:** signatures are frozen here; the `cofferdam.mail` bodies are
-> implemented in the email milestone (see [implementation sequence](15-open-questions.md)).

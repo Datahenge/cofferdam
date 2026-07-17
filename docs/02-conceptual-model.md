@@ -45,8 +45,7 @@ Policy
 
 ## Why not one global switch
 
-A global "non-Production = no side effects" flag is too coarse: teams legitimately
-need sandbox API calls, internal test email, and payment *authorization* against
-sandbox gateways while still blocking customer email and payment *capture*. The
-per-integration / per-operation model expresses exactly what is safe, and denies
-everything else.
+A global on/off flag is too coarse: teams legitimately need sandbox API calls and
+payment *authorization* while blocking customer email and payment *capture*. The
+per-integration / per-operation model expresses the minimum necessary precision.
+See [ADR-0005](adr/0005-fail-closed-by-default.md) for the full rationale.

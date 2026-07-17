@@ -21,7 +21,7 @@ library.
   them, each redirect target must be re-validated against the policy before any
   credential-bearing header is re-sent.
 - The host is parsed from the URL with a structured parser and evaluated *before*
-  the request is sent (see [ADR-0009](0009-structured-host-matching.md),
+  the request is sent ([06 — Host & URL Handling](../06-host-url-handling.md),
   `BR-HOST-004`).
 
 Why `httpx` over `requests`: first-class timeouts, explicit redirect control,

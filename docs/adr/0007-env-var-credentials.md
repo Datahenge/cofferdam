@@ -18,14 +18,9 @@ purpose is to be the *local, inspectable* execution authority.
 - A raw inline `secret_value` **parses** (so a policy is not rejected outright for
   containing one) but is **refused by default**: `resolve_secret` raises unless
   the caller passes `allow_raw=True`, and `--strict` validation rejects it.
-- **No secret value is ever logged, printed, `repr`d, or placed in an exception**
-  (`BR-LOG-002`). `secret_value` fields use `repr=False`.
+- Secret values are never logged, printed, or placed in an exception; see `BR-LOG-002`.
 - Additional sources (files, commands, Vault, AWS Secrets Manager, 1Password,
   Doppler, SOPS) are explicitly future work.
-
-**Scope note (email):** relatedly, v1 email support is *policy checks only* — the
-library does not replace Frappe's email subsystem. This keeps the first release
-focused on enforcement primitives.
 
 ## Consequences
 

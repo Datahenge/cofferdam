@@ -19,8 +19,7 @@ human or AI.
 
 ## Engineering
 
-- **Fail closed.** When in doubt, deny. Safety defaults beat convenience
-  defaults. See [ADR-0005](adr/0005-fail-closed-by-default.md).
+- **Fail closed.** When in doubt, deny. See [ADR-0005](adr/0005-fail-closed-by-default.md).
 - **Never leak secrets.** No secret value in logs, exceptions, `repr`, CLI
   output, or tracebacks — ever ([05](05-secret-handling.md), `BR-LOG-002`).
 - **The core does not import `frappe`.** Frappe-specific behavior is quarantined

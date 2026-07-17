@@ -12,6 +12,7 @@ enforced dimension must appear in the integration's explicit allowlist.
 
 1. **BR-DECISION-001** — Missing policy file → deny (raised at load time as
    `PolicyFileNotFoundError` unless the caller opted into a fallback).
+   *(BR-DECISION-002: identifier retired.)*
 2. **BR-DECISION-003** — Unknown integration → deny (`unknown_integration`).
 3. **BR-DECISION-004** — Disabled integration → deny (`integration_disabled`).
 4. **BR-DECISION-005** — Kind mismatch (caller's `kind` ≠ policy's) → deny
