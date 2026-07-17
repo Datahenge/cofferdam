@@ -1,0 +1,51 @@
+# Example cofferdam policy for a STAGING environment.
+#
+# This file is the *execution authority* for outbound side effects on this
+# environment. It lives on the local filesystem (typically
+# sites/{site_name}/environment_policy.toml) and is NOT restored from a
+# Production database backup. See docs/03-policy-file-format.md.
+
+environment = "staging"
+default_decision = "deny"
+
+[mail]
+mode = "sink"
+sink = "mailpit"
+allow_domains = ["example.internal"]
+
+# --- Vendor API: Windmill sandbox only ---------------------------------------
+[credentials.windmill_default]
+profile = "staging"
+secret_env = "WINDMILL_API_KEY"
+
+[integrations.windmill]
+enabled = true
+kind = "vendor_api"
+credential = "windmill_default"
+allowed_hosts = ["sandbox.windmill.dev"]
+allowed_methods = ["GET", "POST"]
+allowed_operations = ["read", "write"]
+
+# --- Payment: authorize against the sandbox, never capture -------------------
+[credentials.stripe_default]
+profile = "sandbox"
+secret_env = "STRIPE_SANDBOX_SECRET_KEY"
+
+[integrations.stripe]
+enabled = true
+kind = "payment"
+credential = "stripe_default"
+allowed_hosts = ["api.stripe.com"]
+allow_authorize = true
+allow_capture = false
+
+# --- Scoped effect rules -----------------------------------------------------
+[effects.email.customer]
+enabled = false
+
+[effects.email.internal]
+enabled = true
+allow_domains = ["example.internal"]
+
+[effects.scheduled_reports.external]
+enabled = false
