@@ -1,47 +1,107 @@
 # cofferdam
 
-> Hold back Production outbound side effects from flooding non-Production
-> Frappe/ERPNext environments after a database restore.
+> Block outbound side effects — email, API calls, payments, webhooks — from
+> non-production environments.
 
-A **cofferdam** is a temporary watertight enclosure pumped dry so crews can
-build on a submerged foundation. This library is the software equivalent: when
-you restore a Production database into Staging, Test, or Dev, it holds back the
-Production outbound behavior — customer emails, live API calls, payment
-captures, webhooks, scheduled report delivery — so the restored data can be
-worked on safely without leaking real-world side effects.
-
-`cofferdam` is a **plain Python library and CLI**. It is **not a Frappe app**:
-it defines no DocTypes, no MariaDB tables, no migrations, and the core package
-never `import frappe`. It runs and tests as an ordinary Python package.
+A **cofferdam** is a temporary watertight enclosure pumped dry so work can
+happen on a submerged foundation. This library is the software equivalent: it
+holds back outbound side effects from development, staging, and test
+environments so they cannot reach real customers, payment processors, or live
+vendor APIs.
 
 ## The problem
 
-ERPNext/Frappe environments are routinely refreshed by restoring Production
-MariaDB backups into Dev/Test/Staging. That restored database carries Production
-**integration settings, email accounts, API endpoints, encrypted credentials,
-payment configuration, webhooks, and scheduled jobs**. If the non-Production
-environment is allowed to act on those values, it behaves as if it were
-Production — mailing customers, charging cards, and calling live vendor APIs
-against real data.
+When a non-production environment is refreshed from a production database
+backup, the restored data includes live email accounts, API credentials,
+payment configuration, webhook endpoints, and scheduled job settings. Without
+a guard, the non-production environment behaves like production — emailing
+customers, charging cards, and calling live APIs against real data.
 
-## The design rule
+## How it works
 
-> **Restored SQL owns business intent. Local environment config owns execution
-> authority.**
+`cofferdam` reads a **local TOML policy file** that lives on the environment's
+filesystem — never in the database, never in a backup. That file is the
+execution authority for every outbound action.
 
-`cofferdam` puts execution authority in a **local TOML policy file** that lives
-on the environment's filesystem — never in the database, never restored from a
-backup. The engine answers one question for every outbound action:
+> **Restored data owns business intent. Local environment config owns
+> execution authority.**
 
-> *Is this specific side effect allowed **here**?*
+The engine answers one question per outbound action:
+
+> *Is this specific side effect permitted **here**?*
 
 It **fails closed**: absent, incomplete, or invalid policy denies the action.
+
+## Installation
+
+```console
+$ pip install cofferdam            # core library + CLI
+$ pip install "cofferdam[http]"    # adds the policy-checked HTTP helper (httpx)
+```
+
+Requires Python 3.10+.
+
+## Quick start
+
+```python
+from cofferdam import load_policy
+
+policy = load_policy("environment_policy.toml")
+
+# Raise PolicyDeniedError if this side effect is not explicitly permitted here.
+policy.assert_allowed(
+    integration="windmill",
+    kind="vendor_api",
+    operation="write",
+    method="POST",
+    host="sandbox.windmill.dev",
+    credential="windmill_default",
+)
+
+# Or inspect the decision without raising.
+decision = policy.decide(integration="stripe", kind="payment", operation="capture")
+if not decision.allowed:
+    print(decision.reason_code)   # e.g. "operation_not_allowed"
+```
+
+Policy-checked HTTP — host validated against the policy before any bytes leave
+(optional `cofferdam[http]` extra):
+
+```python
+from cofferdam.http import request
+
+response = request(
+    policy=policy,
+    integration="windmill",
+    operation="write",
+    method="POST",
+    url="https://sandbox.windmill.dev/api/jobs/run",
+    credential="windmill_default",
+    json=payload,
+)
+```
+
+## Email decoration
+
+When an email is sent from a non-production environment, `cofferdam` decorates
+the subject and body so recipients immediately know the source:
+
+- **Subject:** `STAGING - Weekly Sales Report`
+- **Body:** a warning banner (HTML) or a notice line (plain text) prepended to
+  the original content
+
+Decoration is on by default for any non-production environment and can be
+disabled with `decorate = false` under `[mail]`.
 
 ## Example policy
 
 ```toml
 environment = "staging"
 default_decision = "deny"
+
+[mail]
+mode = "sink"
+sink = "dev-inbox@example.internal"   # all outbound mail redirected here
 
 [integrations.windmill]
 enabled = true
@@ -75,53 +135,6 @@ enabled = true
 allow_domains = ["example.internal"]
 ```
 
-## Usage (planned public API)
-
-```python
-from cofferdam import load_policy
-
-policy = load_policy("sites/staging.example.com/environment_policy.toml")
-
-# Raise if this side effect is not explicitly permitted here.
-policy.assert_allowed(
-    integration="windmill",
-    kind="vendor_api",
-    operation="write",
-    method="POST",
-    host="sandbox.windmill.dev",
-    credential="windmill_default",
-)
-
-# Or inspect the decision without raising.
-decision = policy.decide(integration="stripe", kind="payment", operation="capture")
-if not decision.allowed:
-    print(decision.reason_code)   # e.g. "operation_not_allowed"
-```
-
-Policy-checked HTTP (optional `cofferdam[http]` extra):
-
-```python
-from cofferdam.http import request
-
-response = request(
-    policy=policy,
-    integration="windmill",
-    operation="write",
-    method="POST",
-    url="https://sandbox.windmill.dev/api/jobs/run",
-    credential="windmill_default",
-    json=payload,
-)
-```
-
-Inside a Frappe site (no Frappe app required):
-
-```python
-from cofferdam.frappe import get_policy
-
-policy = get_policy()   # locates sites/{site}/environment_policy.toml
-```
-
 ## CLI
 
 ```console
@@ -133,22 +146,27 @@ $ cofferdam decide    path/to/environment_policy.toml \
       --credential windmill_default
 ```
 
-`validate` exits non-zero on invalid policy. `inspect` prints a **redacted**
-summary. `decide` prints allow/deny plus a reason code, never a secret.
+`validate` exits non-zero on invalid policy. `inspect` prints a redacted
+summary — secrets are never shown. `decide` prints allow/deny and a stable
+reason code.
 
-## Status
+## Frappe / ERPNext
 
-Early development. This repository is being built with a document-driven
-("Scribe Coding") workflow: see [`docs/`](docs/) for the requirements
-specification and [`docs/adr/`](docs/adr/) for the architecture decisions.
+`cofferdam` was designed with ERPNext and Frappe Framework in mind — the
+database restore pattern is a daily reality for that ecosystem. The core
+library has no dependency on Frappe and works with any Python application.
 
-## Installation
+For full Frappe/ERPNext integration — automatic policy discovery by bench
+site, interception of `frappe.sendmail`, and webhook delivery gating — see
+**[cofferdam-app](https://github.com/Datahenge/cofferdam-app)**, a companion
+Frappe app that installs into a bench alongside your ERPNext site.
 
-```console
-$ pip install cofferdam            # core library + CLI
-$ pip install "cofferdam[http]"    # adds the policy-checked HTTP helper (httpx)
-```
+## Requirements specification
+
+This library is built with a document-driven workflow. See [`docs/`](docs/)
+for the full requirements specification and [`docs/adr/`](docs/adr/) for
+architecture decisions.
 
 ## License
 
-MIT © 2026 Brian Pond / Datahenge LLC
+Apache-2.0 © 2026 Brian Pond / Datahenge LLC
