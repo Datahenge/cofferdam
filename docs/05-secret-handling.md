@@ -16,6 +16,12 @@ from; it is not the secret.
   becomes secret material requiring restrictive permissions and careful backups.
 - **Future sources** (not in v1): file references, command references, AWS Secrets
   Manager, HashiCorp Vault, 1Password CLI, Doppler, SOPS.
+- **No implicit file autoloading.** `resolve_secret` reads `os.environ` only —
+  never an adjacent `.env` or a file path named in the policy. Populating many
+  env vars for local development (web server, workers, AI pair-programming
+  agents) is a shell/process-bootstrap concern, not cofferdam's; see
+  [ADR-0013](adr/0013-no-secret-autoloading-direnv-docs.md), which also commits
+  to documenting `direnv` for that purpose.
 
 ## Redaction (`BR-LOG-002`)
 

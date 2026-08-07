@@ -150,6 +150,64 @@ $ cofferdam decide    path/to/environment_policy.toml \
 summary — secrets are never shown. `decide` prints allow/deny and a stable
 reason code.
 
+## Local development
+
+A real policy file can reference many credentials — one `secret_env` per
+integration. Each of those environment variables has to be present in every
+process that resolves it: the web server, every worker, and whatever shell a
+developer or an AI pair-programming agent is using while writing integration
+code. Prefixing every command with a wall of `SECRET_X=... SECRET_Y=...`
+doesn't scale, and `cofferdam` deliberately doesn't solve this for you —
+`resolve_secret` only ever reads `os.environ`, never an adjacent `.env` file
+or a path named in the policy ([ADR-0013](docs/adr/0013-no-secret-autoloading-direnv-docs.md)).
+That keeps "missing env var" a real, fail-closed condition (ADR-0005) and
+keeps the policy file itself free of secret-custody concerns (ADR-0007).
+
+Instead, provision local secrets at the shell level with
+**[direnv](https://direnv.net/)**, so every tool started from your project
+directory — an interactive shell, `bench start`, `pytest`, `cofferdam decide`,
+or an AI agent's own shell — inherits the same variables automatically.
+
+**Install:**
+
+```console
+$ brew install direnv        # macOS
+$ sudo apt install direnv    # Debian/Ubuntu
+```
+
+Then hook it into your shell (add to `~/.bashrc` or `~/.zshrc`):
+
+```bash
+eval "$(direnv hook bash)"   # or: eval "$(direnv hook zsh)"
+```
+
+Open a new shell (or `source` the rc file) after adding the hook.
+
+**Use:** create a `.envrc` file next to `environment_policy.toml` (or at the
+project root) exporting one variable per `secret_env` your policy references:
+
+```bash
+# .envrc — never commit this file
+export WINDMILL_API_KEY="sk_test_..."
+export STRIPE_SANDBOX_SECRET_KEY="sk_test_..."
+```
+
+Then authorize it once per directory:
+
+```console
+$ direnv allow
+```
+
+From then on, `cd`-ing into that directory loads those variables into the
+shell, and leaving it unloads them again — no manual exporting, no per-tool
+setup. Add `.envrc` to `.gitignore` immediately; it holds real secret values.
+
+`direnv` is a local-development convenience only — it affects shells it hooks
+into, not processes started by a process manager. Staging/production workers
+and the web server should get their env vars from the process manager instead
+(systemd `EnvironmentFile=`, supervisor `environment=`) or a real secrets
+manager, not from `.envrc`.
+
 ## Frappe / ERPNext
 
 `cofferdam` was designed with ERPNext and Frappe Framework in mind — the

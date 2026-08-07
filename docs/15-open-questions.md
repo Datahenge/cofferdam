@@ -124,6 +124,31 @@ or handler functions would early-return when it is False.
 3. Is the graceful-import pattern sufficient, or does bench's app ordering
    guarantee ERPNext is importable when cofferdam_app initializes?
 
+### Q12 — Bulk secret provisioning for local development ✅ DECIDED 2026-08-07
+
+**Context:** A large deployment (e.g. ERPNext plus several integrations) can
+have many `credentials.<name>` entries in one policy file. Each needs its
+env var set in the web server, every worker, and any shell an engineer or an
+AI pair-programming agent is using — prefixing commands with a long list of
+`SECRET_X=...` assignments by hand does not scale.
+
+**Decision (ADR-0013):**
+
+1. `cofferdam` will **not** autoload secrets from any file (no adjacent `.env`
+   discovery, no `secret_env_file`-style schema field). `resolve_secret` stays
+   `os.environ`-only, preserving the fail-closed guarantee (`BR-SECRET-002`,
+   ADR-0005) and the policy file's reviewable/commit-safe status (ADR-0007).
+2. `cofferdam` user documentation **will** cover `direnv` — what it is, how to
+   install it, how to use it — as the recommended way to provision local-dev
+   secrets uniformly across developer shells and AI agents, without any
+   cofferdam-specific mechanism.
+
+Spec: [ADR-0013](adr/0013-no-secret-autoloading-direnv-docs.md);
+[05 — Secret Handling](05-secret-handling.md).
+
+**Follow-up:** ✅ done — `direnv` install/use guide added to the top-level
+`cofferdam` README under "Local development" (2026-08-07).
+
 ## Implementation sequence (document-driven)
 
 **`cofferdam` library (`datahenge/cofferdam`)**
