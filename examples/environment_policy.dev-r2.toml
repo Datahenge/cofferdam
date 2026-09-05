@@ -1,0 +1,56 @@
+# Example cofferdam policy for a DEV environment using object storage
+# (Cloudflare R2 / S3-compatible).
+#
+# It demonstrates the three sections working together:
+#
+#   [integrations.*]  what is permitted here
+#   [configs.*]       where this environment points   (non-secret)
+#   [credentials.*]   where the key material comes from (secret)
+#
+# See docs/adr/0014-structured-site-local-config.md.
+
+environment = "dev"
+default_decision = "deny"
+
+[mail]
+mode = "deny"                     # a dev box sends no mail at all
+
+# --- What this environment may do with object storage ------------------------
+[integrations.cloudflare_r2]
+enabled = true
+kind = "file_transfer"
+credential = "cloudflare_r2_keys"
+config = "cloudflare_r2_dev"
+allowed_hosts = ["abc123.r2.cloudflarestorage.com"]
+allowed_methods = ["GET", "PUT", "DELETE"]
+allowed_operations = ["upload", "download", "presigned_download", "delete"]
+
+# --- Where this environment points (non-secret) ------------------------------
+# Arbitrary structured settings: scalars, arrays, and nested tables. Keys keep
+# the exact casing written here. Never put secret material in this section —
+# `cofferdam validate --strict` rejects secret-shaped key names.
+[configs.cloudflare_r2_dev]
+account_id = "abc123"
+endpoint_url = "https://abc123.r2.cloudflarestorage.com"
+bucket_name = "foo-erpnext-dev"
+region_name = "auto"
+attachment_prefix = "sites/foo/attachments/"
+backup_prefix = "sites/foo/backups/"
+delivery_mode = "stream"
+presigned_get_expiry_seconds = 300
+delete_from_r2_on_file_delete = false
+
+[configs.cloudflare_r2_dev.retry]
+maxAttempts = 3                   # CamelCase survives: keys are never rewritten
+backoffSeconds = [1, 2, 5]
+
+# --- Where the key material comes from (secret) ------------------------------
+# This credential carries a *pair* of secrets, so it uses an `env` sub-table
+# instead of a single `secret_env`. Neither value is stored here — only the
+# names of the environment variables that hold them.
+[credentials.cloudflare_r2_keys]
+profile = "dev"
+
+[credentials.cloudflare_r2_keys.env]
+access_key_id = "R2_ACCESS_KEY_ID"
+secret_access_key = "R2_SECRET_ACCESS_KEY"

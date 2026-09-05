@@ -17,5 +17,6 @@ supersedes the old one. Format after Michael Nygard's ADR template.
 | [0011](0011-frappe-app-first-release.md) | Ship a Frappe app (`cofferdam-app`) in the first release | Accepted |
 | [0012](0012-remove-cofferdam-frappe-module.md) | Remove `cofferdam.frappe` from the core library | Accepted |
 | [0013](0013-no-secret-autoloading-direnv-docs.md) | No secret autoloading; recommend `direnv` in documentation instead | Accepted |
+| [0014](0014-structured-site-local-config.md) | Structured site-local config (`[configs.*]`), separate from credentials | Accepted |
 
 *ADR-0001 and ADR-0009 were deleted: neither recorded an architectural decision. 0001 was template boilerplate already covered by the ground rules; 0009 was a security requirement already fully specified in [06 — Host & URL Handling](../06-host-url-handling.md).*

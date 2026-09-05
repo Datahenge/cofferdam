@@ -19,6 +19,7 @@ from cofferdam.config import load_policy, loads_policy
 from cofferdam.decisions import Decision
 from cofferdam.errors import (
     CofferdamError,
+    ConfigError,
     CredentialError,
     PolicyDeniedError,
     PolicyFileNotFoundError,
@@ -29,6 +30,7 @@ from cofferdam.models import Environment, Policy, SideEffectKind
 
 __all__ = [
     "CofferdamError",
+    "ConfigError",
     "CredentialError",
     "Decision",
     "Environment",
@@ -42,4 +44,4 @@ __all__ = [
     "loads_policy",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

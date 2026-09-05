@@ -33,13 +33,20 @@ Policy
 ├── default_decision       (allow | deny; deny is the safe default)
 ├── mail                   (optional MailPolicy)
 ├── credentials[name]      -> Credential  (profile + secret source)
-├── integrations[name]     -> Integration (kind, credential ref, allowlists)
+├── configs[name]          -> table       (non-secret, environment-specific settings)
+├── integrations[name]     -> Integration (kind, credential + config refs, allowlists)
 └── effects[kind][scope]   -> EffectRule  (e.g. effects.email.customer)
 ```
 
 - An **Integration** may reference a **Credential** by name; the reference is
   validated (the credential must exist, [12](12-validation.md)).
 - A **Credential** names a *source* of a secret (an env var), not the secret.
+- A **Config** holds structured, environment-specific settings that are *not*
+  secret — an endpoint, a bucket, a region, a prefix. An Integration may
+  reference one by name, validated the same way ([ADR-0014](adr/0014-structured-site-local-config.md)).
+  The three sections answer three separate questions: `integrations`/`effects`
+  say **what is permitted**, `configs` says **where this environment points**,
+  and `credentials` says **where the key material comes from**.
 - **Effects** express scoped allow/deny rules for classes that are not a single
   named integration (customer email, internal email, external scheduled reports).
 

@@ -39,6 +39,35 @@ allowed_hosts = ["api.stripe.com"]
 allow_authorize = true
 allow_capture = false
 
+# --- Object storage: non-secret settings and a multi-part credential ----------
+# `configs.*` holds structured, environment-specific settings that are NOT
+# secret; `credentials.*` holds only where the key material comes from
+# (ADR-0014). The two are resolved independently by the application.
+[configs.object_store_staging]
+endpoint_url = "https://s3.staging.example.internal"
+bucket_name = "example-erpnext-staging"
+region_name = "auto"
+attachment_prefix = "sites/staging/attachments/"
+presigned_get_expiry_seconds = 300
+delete_on_file_delete = false
+
+[credentials.object_store_keys]
+profile = "staging"
+
+# A credential carrying a related pair of secrets (BR-SECRET-004).
+[credentials.object_store_keys.env]
+access_key_id = "OBJECT_STORE_ACCESS_KEY_ID"
+secret_access_key = "OBJECT_STORE_SECRET_ACCESS_KEY"
+
+[integrations.object_store]
+enabled = true
+kind = "file_transfer"
+credential = "object_store_keys"
+config = "object_store_staging"
+allowed_hosts = ["s3.staging.example.internal"]
+allowed_methods = ["GET", "PUT", "DELETE"]
+allowed_operations = ["upload", "download", "delete"]
+
 # --- Scoped effect rules -----------------------------------------------------
 [effects.email.customer]
 enabled = false

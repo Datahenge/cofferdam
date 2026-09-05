@@ -61,8 +61,20 @@ def _cmd_inspect(args: argparse.Namespace) -> int:
     print(f"credentials       : {len(policy.credentials)}")
     for name, cred in sorted(policy.credentials.items()):
         # Redacted: show the source *name*, never a value (BR-CLI-004).
-        source = f"env:{cred.secret_env}" if cred.secret_env else "raw:<redacted>"
+        if cred.secret_env:
+            source = f"env:{cred.secret_env}"
+        elif cred.env:
+            source = "env:" + ",".join(sorted(cred.env.values()))
+        else:
+            source = "raw:<redacted>"
         print(f"  - {name} [profile={cred.profile}, source={source}]")
+    print(f"configs           : {len(policy.configs)}")
+    for name, table in sorted(policy.configs.items()):
+        # Configs are non-secret by contract (BR-CONFIG-006), but print key
+        # *names* only, so a value mistakenly stored here is not echoed to a
+        # terminal or a CI log (BR-CLI-004).
+        keys = ", ".join(sorted(str(k) for k in table)) or "(none)"
+        print(f"  - {name} [{len(table)} keys: {keys}]")
     return EXIT_OK
 
 

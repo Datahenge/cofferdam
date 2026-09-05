@@ -127,6 +127,29 @@ allow_capture = false            # never capture money outside Production
 profile = "sandbox"
 secret_env = "STRIPE_SANDBOX_SECRET_KEY"
 
+# Non-secret, environment-specific settings live in their own section; the
+# credential names only where the key material comes from (ADR-0014).
+[integrations.object_store]
+enabled = true
+kind = "file_transfer"
+credential = "object_store_keys"
+config = "object_store_staging"
+allowed_hosts = ["s3.staging.example.internal"]
+allowed_methods = ["GET", "PUT", "DELETE"]
+
+[configs.object_store_staging]
+endpoint_url = "https://s3.staging.example.internal"
+bucket_name = "example-erpnext-staging"
+region_name = "auto"
+presigned_get_expiry_seconds = 300
+
+[credentials.object_store_keys]
+profile = "staging"
+
+[credentials.object_store_keys.env]   # a credential may carry several secrets
+access_key_id = "OBJECT_STORE_ACCESS_KEY_ID"
+secret_access_key = "OBJECT_STORE_SECRET_ACCESS_KEY"
+
 [effects.email.customer]
 enabled = false                  # no customer email in Staging
 
@@ -134,6 +157,162 @@ enabled = false                  # no customer email in Staging
 enabled = true
 allow_domains = ["example.internal"]
 ```
+
+A second, fuller example — object storage with structured config and a
+multi-part credential — ships at
+[`examples/environment_policy.dev-r2.toml`](examples/environment_policy.dev-r2.toml).
+
+## Policy file reference
+
+Every section and key the policy file accepts. **Unknown keys are rejected**:
+a typo fails at load with the offending key and the permitted keys named, rather
+than silently disabling a guard.
+
+### Top level
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `environment` | `production` \| `staging` \| `test` \| `dev` | *required* | Which environment this policy governs |
+| `default_decision` | `allow` \| `deny` | `deny` | Verdict when nothing more specific matches. `allow` in production is rejected |
+| `[mail]` | table | — | Environment-wide mail handling |
+| `[integrations.<name>]` | table | — | What each named integration may do |
+| `[configs.<name>]` | table | — | Structured, **non-secret** settings |
+| `[credentials.<name>]` | table | — | Where secret material comes from |
+| `[effects.<kind>.<scope>]` | table | — | Scoped rules for effect classes that are not one named integration |
+
+### `[integrations.<name>]`
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `enabled` | bool | `false` | A disabled integration always denies |
+| `kind` | enum | *required* | `vendor_api`, `email`, `payment`, `webhook`, `report_delivery`, `file_transfer` |
+| `credential` | string | — | Name of a `[credentials.*]` table |
+| `config` | string | — | Name of a `[configs.*]` table |
+| `allowed_hosts` | list[str] | `[]` | Bare hostnames — not URLs |
+| `allowed_methods` | list[str] | `[]` | HTTP methods |
+| `allowed_operations` | list[str] | `[]` | Application-defined operation names |
+| `allow_authorize` | bool | `false` | `kind = "payment"`: permit authorization |
+| `allow_capture` | bool | `false` | `kind = "payment"`: permit capture |
+
+> **An empty allowlist denies.** If you pass a host, method, or operation to
+> `decide()` and the matching allowlist is empty, the answer is *deny*. Listing
+> nothing is not "no opinion" — it is "nothing is permitted".
+
+### `[configs.<name>]` — structured, non-secret settings
+
+Environment-specific settings your application needs but that are **not secret**:
+an endpoint, a bucket, a region, a prefix, a timeout, a feature switch. Values
+may be any TOML scalar, array, or nested table, and cofferdam does not interpret
+them — no policy decision depends on a config value.
+
+```toml
+[configs.object_store_dev]
+endpoint_url = "https://abc123.r2.cloudflarestorage.com"
+bucket_name = "foo-erpnext-dev"
+region_name = "auto"
+attachment_prefix = "sites/foo/attachments/"
+presigned_get_expiry_seconds = 300
+delete_on_file_delete = false
+allowed_extensions = ["pdf", "png"]
+
+[configs.object_store_dev.retry]      # nested tables are fine
+maxAttempts = 3                       # so is CamelCase — keys are never rewritten
+```
+
+- **Keys keep their exact casing.** Nothing is lower- or upper-cased, so a key
+  your vendor's SDK spells `maxAttempts` stays `maxAttempts`.
+- **Do not put secrets here.** `cofferdam validate --strict` rejects config keys
+  whose *names* indicate secret material (`password`, `secret`, `token`,
+  `api_key`, `private_key`, …) and points you at `[credentials.*]`. Identifiers
+  are exempt: `account_id` and `access_key_id` pass, `secret_access_key` does
+  not. The check reads key names only, never values.
+- A reference from an integration must resolve: `config = "typo_here"` fails at
+  load, not at 3 a.m.
+
+### `[credentials.<name>]` — where secret material comes from
+
+A credential names *where* a secret lives. It is not the secret. `profile` is a
+free-form label recorded in the policy and shown by `cofferdam inspect`; the
+decision engine does not interpret it.
+
+**One secret, from the environment** — the common case:
+
+```toml
+[credentials.windmill_default]
+profile = "staging"
+secret_env = "WINDMILL_API_KEY"
+```
+
+**Several related secrets** — an access-key pair, for example. The `env`
+sub-table maps a logical name you choose to the variable holding it:
+
+```toml
+[credentials.object_store_keys]
+profile = "dev"
+
+[credentials.object_store_keys.env]
+access_key_id = "R2_ACCESS_KEY_ID"
+secret_access_key = "R2_SECRET_ACCESS_KEY"
+```
+
+**A raw inline secret** — parses, but is refused unless you explicitly opt in at
+the call site, and `--strict` rejects it outright. Using it makes the policy file
+itself secret material:
+
+```toml
+[credentials.legacy]
+profile = "dev"
+secret_value = "…"        # discouraged; see ADR-0007
+```
+
+A credential uses the `env` table *or* a single-valued source, never both —
+declaring both is a load-time error rather than a silent precedence rule.
+
+### `[mail]`
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `mode` | `deny` \| `sink` \| `allow_internal` | `deny` | How outbound mail is handled |
+| `sink` | string | — | Address everything is redirected to when `mode = "sink"` |
+| `allow_domains` | list[str] | `[]` | Domains permitted when `mode = "allow_internal"` |
+| `decorate` | bool | `true` | Label non-production subject and body; `false` opts out |
+
+### `[effects.<kind>.<scope>]`
+
+| Key | Type | Default | Meaning |
+|-----|------|---------|---------|
+| `enabled` | bool | `false` | Whether that scoped class of effect is permitted |
+| `allow_domains` | list[str] | `[]` | Domains permitted for that scope |
+
+## Resolving config and secrets
+
+An integration can name both a config and a credential, and your application
+resolves each independently — settings from the policy file, secrets from the
+process environment:
+
+```python
+integration = policy.integrations["object_store"]
+config  = policy.resolve_config(integration.config)           # -> dict, keys as written
+secrets = policy.resolve_credentials(integration.credential)  # -> {logical name: secret}
+
+client = S3Client(
+    endpoint_url=config["endpoint_url"],
+    bucket_name=config["bucket_name"],
+    region_name=config.get("region_name", "auto"),
+    access_key_id=secrets["access_key_id"],
+    secret_access_key=secrets["secret_access_key"],
+)
+```
+
+| Call | Returns | Raises |
+|------|---------|--------|
+| `policy.resolve_config(name)` | A copy of the config table; mutating it cannot alter the policy | `ConfigError` if undefined — a typo fails closed instead of yielding an empty dict |
+| `policy.resolve_secret(name)` | One secret, from `secret_env` | `SecretResolutionError` if the variable is unset |
+| `policy.resolve_credentials(name)` | Every secret in the `env` table | `SecretResolutionError` naming the first unset variable |
+| `policy.resolve_json_secret(name)` | A secret that is itself a JSON object, parsed | `SecretResolutionError` if it is not a JSON object — the value is never echoed |
+
+No resolver ever puts a secret value into a log line, an exception message, or a
+traceback.
 
 ## CLI
 

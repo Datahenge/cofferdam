@@ -14,7 +14,8 @@ $ cofferdam validate path/to/environment_policy.toml --strict
 
 Loads and validates the policy. **Exits non-zero on an invalid policy**
 (exit code `2`), printing each problem. `--strict` additionally requires every
-`secret_env` variable to be set and rejects raw secrets.
+`secret_env` variable to be set, rejects raw secrets, and rejects secret-shaped
+key names under `configs.*` (`BR-VALIDATE-013`).
 
 ### `inspect` (`BR-CLI-002`)
 
@@ -23,8 +24,10 @@ $ cofferdam inspect path/to/environment_policy.toml
 ```
 
 Prints a **redacted** summary: environment, default decision, mail mode,
-integrations (kind/state/hosts), and credentials (profile and *source name*
-only — never a value, `BR-CLI-004`).
+integrations (kind/state/hosts), credentials (profile and *source name* only —
+never a value, `BR-CLI-004`), and configs (name and *key names* only). Config
+values are non-secret by contract, but `inspect` still prints only key names, so
+that a value mistakenly stored there is not echoed to a terminal or a CI log.
 
 ### `decide` (`BR-CLI-003`)
 

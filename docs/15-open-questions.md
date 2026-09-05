@@ -149,6 +149,40 @@ Spec: [ADR-0013](adr/0013-no-secret-autoloading-direnv-docs.md);
 **Follow-up:** ✅ done — `direnv` install/use guide added to the top-level
 `cofferdam` README under "Local development" (2026-08-07).
 
+### Q13 — Structured site-local configuration ✅ CONFIRMED 2026-09-05
+
+**Context:** [Issue #4](https://github.com/Datahenge/cofferdam/issues/4). The
+policy file had a home for secret *references* and none for structured,
+environment-specific, **non-secret** settings (an R2 endpoint, bucket, region,
+prefixes). The workaround was a JSON bundle in `secret_value` read back with
+`allow_raw=True` — which mislabels non-secret data and, worse, normalizes the
+opt-in flag that [ADR-0007](adr/0007-env-var-credentials.md) made deliberately
+rare.
+
+**Resolution ([ADR-0014](adr/0014-structured-site-local-config.md)):**
+
+| Decision | Resolution |
+|----------|------------|
+| Where non-secret settings live | New top-level `[configs.<name>]` section; arbitrary TOML scalars, arrays, nested tables (`BR-CONFIG-004`) |
+| Key casing | Preserved exactly; never normalized (`BR-CONFIG-005`) |
+| Secrets in a config | Non-secret by contract; strict validation rejects secret-shaped **key names** (`BR-CONFIG-006`, `BR-VALIDATE-013`) |
+| Integration reference | `config = "..."` alongside `credential = "..."`; a dangling reference fails at load (`BR-VALIDATE-012`) |
+| Multi-part credentials | `[credentials.<name>.env]` sub-table (logical key → env var), chosen over free-form `<name>_env` keys so `extra="forbid"` keeps catching typos (`BR-SECRET-004`, `BR-VALIDATE-015`) |
+| API | `resolve_config`, `resolve_credentials`, `resolve_json_secret` (`BR-API-005`) |
+| JSON secret failure path | Error fully detached from `json.JSONDecodeError`, whose `.doc` holds the whole secret (`BR-SECRET-005`, `BR-LOG-002`) |
+| CLI `inspect` | Prints config names and **key names** only, never values (`BR-CLI-004`) |
+
+Points confirmed by Brian on 2026-09-05: the `env` sub-table form for multi-part
+credentials; strict-mode rejection (rather than a warning or docs alone) for
+secret-shaped config keys; and key-names-only `inspect` output.
+
+**Sub-question — ✅ CONFIRMED 2026-09-05:** the `BR-VALIDATE-013` key-name
+heuristic exempts keys ending in `_id` that do not also contain `secret`, so
+`access_key_id` — the public half of a key pair, like a username — is permitted
+while `secret_access_key` is still flagged. Confirmed by Brian. If it later
+proves too permissive or too strict, the fragment list and the exemption in
+`cofferdam.validators._is_secret_shaped` are the two places to adjust.
+
 ## Implementation sequence (document-driven)
 
 **`cofferdam` library (`datahenge/cofferdam`)**
@@ -164,6 +198,7 @@ Spec: [ADR-0013](adr/0013-no-secret-autoloading-direnv-docs.md);
 9. ❌ Frappe helper module — cancelled (ADR-0012). Site discovery belongs in `cofferdam-app`; core library has no Frappe dependency.
 10. ✅ Restore-safety + host-parsing tests (Frappe leg removed per ADR-0012; HTTP and email legs covered in test_http.py and test_mail.py)
 11. ✅ README rewritten: ecosystem-agnostic framing, cofferdam-app link, Apache-2.0 license (ERPNext usage examples belong in cofferdam-app docs)
+17. ✅ Structured site-local config `[configs.*]`, multi-part credentials, and the three resolution helpers (issue #4, ADR-0014, Q13)
 
 **`cofferdam-app` Frappe app (`datahenge/cofferdam-app`)**
 

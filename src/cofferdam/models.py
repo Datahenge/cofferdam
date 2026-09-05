@@ -14,7 +14,7 @@ fail-closed posture consistent with ADR-0005 (BR-VALIDATE-003).
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -63,11 +63,20 @@ class Credential(_Strict):
     ``secret_value`` (a raw inline secret) is parsed here but rejected by
     default during validation unless raw secrets are explicitly permitted
     (ADR-0007, BR-SECRET-003).
+
+    A credential carrying several related secrets (an access-key pair, say)
+    declares them in the ``env`` sub-table instead of ``secret_env``
+    (BR-SECRET-004, ADR-0014); the two forms are mutually exclusive
+    (BR-VALIDATE-015).
     """
 
     profile: str = Field(description="Logical profile name, e.g. 'staging' or 'sandbox'.")
     secret_env: str | None = Field(
         default=None, description="Environment variable holding the secret."
+    )
+    env: dict[str, str] = Field(
+        default_factory=dict,
+        description="Multi-part secret: logical key -> environment variable name.",
     )
     secret_value: str | None = Field(
         default=None,
@@ -82,6 +91,9 @@ class Integration(_Strict):
     enabled: bool = False
     kind: SideEffectKind
     credential: str | None = None
+    # Non-secret, environment-specific settings: a key into policy.configs
+    # (BR-CONFIG-004, BR-VALIDATE-012, ADR-0014).
+    config: str | None = None
     allowed_hosts: list[str] = Field(default_factory=list)
     allowed_methods: list[str] = Field(default_factory=list)
     allowed_operations: list[str] = Field(default_factory=list)
@@ -119,6 +131,11 @@ class Policy(_Strict):
     default_decision: DefaultDecision = DefaultDecision.DENY
     mail: MailPolicy | None = None
     credentials: dict[str, Credential] = Field(default_factory=dict)
+    # configs.<name> -> arbitrary non-secret settings (BR-CONFIG-004, ADR-0014).
+    # Values are deliberately untyped: cofferdam stores and returns them without
+    # interpreting them, and no decision depends on a config value. Key casing is
+    # preserved exactly as written (BR-CONFIG-005).
+    configs: dict[str, dict[str, Any]] = Field(default_factory=dict)
     integrations: dict[str, Integration] = Field(default_factory=dict)
     # effects.<kind>.<scope> -> EffectRule
     effects: dict[str, dict[str, EffectRule]] = Field(default_factory=dict)
@@ -143,3 +160,21 @@ class Policy(_Strict):
         from cofferdam.credentials import resolve_secret
 
         return resolve_secret(self, name, allow_raw=allow_raw)
+
+    def resolve_credentials(self, name: str) -> dict[str, str]:
+        """Resolve a multi-part credential's ``env`` table (BR-SECRET-004)."""
+        from cofferdam.credentials import resolve_credentials
+
+        return resolve_credentials(self, name)
+
+    def resolve_json_secret(self, name: str, *, allow_raw: bool = False) -> dict[str, Any]:
+        """Resolve credential ``name`` and parse its value as JSON (BR-SECRET-005)."""
+        from cofferdam.credentials import resolve_json_secret
+
+        return resolve_json_secret(self, name, allow_raw=allow_raw)
+
+    def resolve_config(self, name: str | None) -> dict[str, Any]:
+        """Return a copy of the non-secret ``configs.<name>`` table (BR-CONFIG-004)."""
+        from cofferdam.config import resolve_config
+
+        return resolve_config(self, name)

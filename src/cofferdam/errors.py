@@ -51,6 +51,15 @@ class PolicyDeniedError(CofferdamError):
         super().__init__(decision.message())
 
 
+class ConfigError(CofferdamError):
+    """A `configs.<name>` reference is missing or unusable (BR-CONFIG-004).
+
+    Raised by ``resolve_config`` when the named config is not defined in the
+    policy. Fail-closed: a typo raises rather than yielding an empty mapping
+    that the caller would then paper over with ``.get(..., default)``.
+    """
+
+
 class CredentialError(CofferdamError):
     """A credential reference is missing, malformed, or mismatched.
 

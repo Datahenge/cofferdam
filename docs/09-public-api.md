@@ -10,7 +10,7 @@ from cofferdam import (
     load_policy, loads_policy,           # config
     Policy, Environment, SideEffectKind, # models
     Decision,                            # decisions
-    CofferdamError, PolicyDeniedError, PolicyFileNotFoundError,
+    CofferdamError, ConfigError, PolicyDeniedError, PolicyFileNotFoundError,
     PolicyValidationError, CredentialError, SecretResolutionError,  # errors
 )
 ```
@@ -48,6 +48,50 @@ Methods: `as_log_dict()`, `message()`, `to_exception()`.
 ```python
 secret = policy.resolve_secret("windmill_default")            # from $WINDMILL_API_KEY
 secret = policy.resolve_secret("legacy", allow_raw=True)      # opt-in to raw value
+
+# Multi-part credential declared as [credentials.<name>.env] (BR-SECRET-004):
+secrets = policy.resolve_credentials("cloudflare_r2_keys")
+# -> {"access_key_id": ..., "secret_access_key": ...}
+
+# A single secret whose value is itself a JSON object (BR-SECRET-005):
+secrets = policy.resolve_json_secret("service_account")
+```
+
+`resolve_credentials` raises `SecretResolutionError` on the first named variable
+that is unset, and `CredentialError` if the credential has no `env` table.
+`resolve_json_secret` raises `SecretResolutionError` if the value is not a JSON
+object — without echoing the value ([05](05-secret-handling.md)).
+
+## Structured config (`BR-API-005`)
+
+`[configs.<name>]` holds environment-specific, **non-secret** settings
+([03](03-policy-file-format.md), [ADR-0014](adr/0014-structured-site-local-config.md)).
+
+```python
+config = policy.resolve_config("cloudflare_r2_dev")   # -> dict, keys as written
+config["endpoint_url"]
+config.get("region_name", "auto")
+```
+
+The returned dict is a copy: mutating it does not alter the loaded policy.
+`resolve_config` raises `ConfigError` when the name is not defined — a typo fails
+closed rather than yielding an empty dict.
+
+An integration may name both a credential and a config, resolving each
+independently:
+
+```python
+integration = policy.integrations["cloudflare_r2"]
+config  = policy.resolve_config(integration.config)
+secrets = policy.resolve_credentials(integration.credential)
+
+client = R2Client(
+    endpoint_url=config["endpoint_url"],
+    bucket_name=config["bucket_name"],
+    region_name=config.get("region_name", "auto"),
+    access_key_id=secrets["access_key_id"],
+    secret_access_key=secrets["secret_access_key"],
+)
 ```
 
 ## Policy-checked HTTP (`BR-API-004`, optional extra)
