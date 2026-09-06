@@ -44,4 +44,4 @@ __all__ = [
     "loads_policy",
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

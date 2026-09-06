@@ -11,6 +11,8 @@ decisions are captured in full under `docs/adr/`.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-05
+
 ### Fixed
 
 - Publishing to PyPI failed with `InvalidDistribution: Invalid distribution
@@ -125,6 +127,7 @@ decisions are captured in full under `docs/adr/`.
 - Frappe-specific behavior is **isolated in `cofferdam.frappe`**; the core
   never imports `frappe` (ADR-0010).
 
-[Unreleased]: https://github.com/datahenge/cofferdam/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/datahenge/cofferdam/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/datahenge/cofferdam/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/datahenge/cofferdam/compare/v0.1.1...v0.2.0
 [0.1.0]: https://github.com/datahenge/cofferdam/releases/tag/v0.1.0
