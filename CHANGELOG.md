@@ -11,6 +11,32 @@ decisions are captured in full under `docs/adr/`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Publishing to PyPI failed with `InvalidDistribution: Invalid distribution
+  metadata: '2.5' is not a valid metadata version`. The artifacts were valid;
+  twine 6.2.0 monkeypatches `packaging.metadata._VALID_METADATA_VERSIONS` with
+  a hardcoded allowlist ending at `2.4`, so it rejected the `Metadata-Version:
+  2.5` that current hatchling emits — regardless of the installed `packaging`.
+  The dev extra now requires `twine>=7.0`, which removed that monkeypatch and
+  depends on `packaging>=26.1`.
+
+### Changed
+
+- `make_dist.sh` now runs `uv sync --extra dev --locked`. **Decision:** the
+  dirty-tree guard at the top of the script exists so `pyproject.toml` and
+  `uv.lock` are committed together, but a plain `uv sync` re-locks by default
+  and could rewrite `uv.lock` *after* that guard had already passed —
+  publishing from a tree that changed mid-run. `--locked` asserts the lockfile
+  is current and exits nonzero otherwise, making the guard's invariant real.
+- `make_dist.sh` now runs `uv run twine check --strict dist/*` before upload.
+  **Decision:** kept twine rather than switching the upload step to
+  `uv publish`. `uv publish` performs no client-side validation, which is what
+  made it immune to the bug above, but it also would not catch malformed
+  metadata or a README that fails to render on PyPI. Since PyPI refuses a
+  re-upload of an already-published version, that validation is worth more than
+  the staleness risk, which the `twine>=7.0` floor addresses directly.
+
 ## [0.2.0] — 2026-09-05
 
 ### Added
